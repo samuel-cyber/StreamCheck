@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StreamCheck — Reviewer Dashboard</title>
+  <style>
+    :root { --bg: #f8f9fa; --card: #ffffff; --accent: #2563eb; --reject: #dc2626; --approve: #16a34a; --muted: #6b7280; --border: #e5e7eb; --radius: 12px; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: #1f2937; line-height: 1.6; }
+    header { background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%); color: white; padding: 24px 32px; }
+    header h1 { font-size: 1.5rem; font-weight: 700; }
+    header p { opacity: 0.85; font-size: 0.9rem; margin-top: 4px; }
+    .badge-row { display: flex; gap: 12px; margin-top: 12px; font-size: 0.85rem; }
+    .badge { background: rgba(255,255,255,0.15); padding: 4px 12px; border-radius: 20px; }
+    main { max-width: 960px; margin: 24px auto; padding: 0 16px; }
+    .empty { text-align: center; padding: 64px 16px; color: var(--muted); }
+    .empty h2 { font-size: 1.2rem; margin-bottom: 8px; }
+    .obs-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+    .obs-card .photo-wrap { width: 100%; max-height: 320px; overflow: hidden; border-radius: 8px; margin-bottom: 16px; background: #f0f0f0; display: flex; align-items: center; justify-content: center; }
+    .obs-card .photo-wrap img { width: 100%; object-fit: cover; max-height: 320px; }
+    .obs-card h3 { font-size: 1rem; font-weight: 600; margin-bottom: 4px; }
+    .obs-card .meta { font-size: 0.8rem; color: var(--muted); margin-bottom: 12px; }
+    .obs-card .text-desc { font-size: 0.95rem; margin-bottom: 12px; }
+    .indicator-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+    .chip { background: #eff6ff; color: var(--accent); border-radius: 20px; padding: 4px 12px; font-size: 0.8rem; font-weight: 500; }
+    .confidence { display: inline-block; font-weight: 600; padding: 2px 10px; border-radius: 20px; font-size: 0.85rem; margin-bottom: 12px; }
+    .confidence.high { background: #dcfce7; color: #15803d; }
+    .confidence.med { background: #fef3c7; color: #92400e; }
+    .confidence.low { background: #fee2e2; color: #991b1b; }
+    .reasoning { background: #f9fafb; border-left: 3px solid var(--accent); padding: 12px 16px; border-radius: 0 8px 8px 0; font-size: 0.9rem; margin-bottom: 16px; white-space: pre-wrap; }
+    .actions { display: flex; gap: 12px; }
+    .btn { padding: 10px 24px; border: none; border-radius: 8px; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: opacity 0.15s; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-approve { background: var(--approve); color: white; }
+    .btn-reject { background: var(--reject); color: white; }
+    .btn:hover:not(:disabled) { opacity: 0.85; }
+    .result-msg { margin-top: 8px; font-size: 0.85rem; padding: 8px 12px; border-radius: 6px; }
+    .result-msg.success { background: #dcfce7; color: #15803d; }
+    .result-msg.error { background: #fee2e2; color: #991b1b; }
+    .refresh-bar { text-align: center; margin-bottom: 16px; }
+    .refresh-bar button { background: var(--accent); color: white; border: none; padding: 8px 20px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; font-weight: 500; }
+    .fhir-id { font-size: 0.8rem; color: var(--muted); margin-top: 4px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>StreamCheck — Reviewer Dashboard</h1>
+    <p>AI supports. A human decides.</p>
+    <div class="badge-row">
+      <span class="badge" id="pending-count">Pending: —</span>
+      <span class="badge" id="approved-count">Approved: —</span>
+      <span class="badge" id="rejected-count">Rejected: —</span>
+    </div>
+  </header>
+  <main>
+    <div class="refresh-bar">
+      <button onclick="loadQueue()">Refresh queue</button>
+    </div>
+    <div id="queue"></div>
+  </main>
+  <script>
+    const API = '';
+
+    async function loadQueue() {
+      const [pending, approved, rejected] = await Promise.all([
+        fetch(API + '/queue').then(r => r.json()),
+        fetch(API + '/observations?status=approved').then(r => r.json()),
+        fetch(API + '/observations?status=rejected').then(r => r.json()),
+      ]);
+      document.getElementById('pending-count').textContent = `Pending: ${pending.length}`;
+      document.getElementById('approved-count').textContent = `Approved: ${approved.length}`;
+      document.getElementById('rejected-count').textContent = `Rejected: ${rejected.length}`;
+      const container = document.getElementById('queue');
+      if (pending.length === 0 && approved.length === 0 && rejected.length === 0) {
+        container.innerHTML = '<div class="empty"><h2>No observations yet</h2><p>Submit one from the <a href="/index.html">citizen form</a>.</p></div>';
+        return;
+      }
+      let html = '';
+      // Pending first
+      if (pending.length > 0) {
+        html += '<h2 style="margin-bottom:12px">Pending Review</h2>';
+        pending.forEach(obs => { html += renderCard(obs, true); });
+      }
+      if (approved.length > 0) {
+        html += '<h2 style="margin:24px 0 12px">Approved</h2>';
+        approved.forEach(obs => { html += renderCard(obs, false); });
+      }
+      if (rejected.length > 0) {
+        html += '<h2 style="margin:24px 0 12px">Rejected</h2>';
+        rejected.forEach(obs => { html += renderCard(obs, false); });
+      }
+      container.innerHTML = html;
+    }
+
+    function confidenceClass(c) { return c >= 0.75 ? 'high' : c >= 0.5 ? 'med' : 'low'; }
+
+    function renderCard(obs, showActions) {
+      const indicators = (obs.ai_indicators || []).map(i => `<span class="chip">${i.replace(/_/g, ' ')}</span>`).join('');
+      const confPct = Math.round(obs.ai_confidence * 100);
+      const statusLabel = obs.status === 'approved' ? '✅ Approved' : obs.status === 'rejected' ? '❌ Rejected' : '⏳ Pending';
+      let actionsHtml = '';
+      if (showActions) {
+        actionsHtml = `
+          <div class="actions">
+            <button class="btn btn-approve" onclick="approveObs(${obs.id})">✓ Approve</button>
+            <button class="btn btn-reject" onclick="rejectObs(${obs.id})">✗ Reject</button>
+          </div>
+          <div id="result-${obs.id}"></div>`;
+      }
+      const fhirHtml = obs.fhir_id ? `<div class="fhir-id">FHIR ID: ${obs.fhir_id}</div>` : '';
+      return `
+        <div class="obs-card" id="card-${obs.id}">
+          <div class="photo-wrap"><img src="${obs.photo_url}" alt="Submitted photo" loading="lazy"></div>
+          <div class="meta">${statusLabel} · Observation #${obs.id} · ${new Date(obs.created_at).toLocaleString()}</div>
+          <h3>Citizen description</h3>
+          <p class="text-desc">${escapeHtml(obs.text_description)}</p>
+          <div class="indicator-chips">${indicators || '<span class="chip" style="background:#f3f4f6;color:#6b7280">no indicators detected</span>'}</div>
+          <span class="confidence ${confidenceClass(obs.ai_confidence)}">Confidence: ${confPct}%</span>
+          <h3>AI reasoning</h3>
+          <div class="reasoning">${escapeHtml(obs.ai_reasoning)}</div>
+          ${fhirHtml}
+          ${actionsHtml}
+        </div>`;
+    }
+
+    function escapeHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+    async function approveObs(id) {
+      const el = document.getElementById('result-' + id);
+      el.innerHTML = 'Approving...';
+      try {
+        const res = await fetch(API + '/observations/' + id + '/approve', { method: 'POST' });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Approve failed');
+        el.innerHTML = `<div class="result-msg success">Approved! FHIR ID: ${data.fhir_id}</div>`;
+        setTimeout(loadQueue, 800);
+      } catch (e) { el.innerHTML = `<div class="result-msg error">${escapeHtml(e.message)}</div>`; }
+    }
+
+    async function rejectObs(id) {
+      const el = document.getElementById('result-' + id);
+      el.innerHTML = 'Rejecting...';
+      try {
+        const res = await fetch(API + '/observations/' + id + '/reject', { method: 'POST' });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Reject failed');
+        el.innerHTML = `<div class="result-msg success">Rejected.</div>`;
+        setTimeout(loadQueue, 800);
+      } catch (e) { el.innerHTML = `<div class="result-msg error">${escapeHtml(e.message)}</div>`; }
+    }
+
+    loadQueue();
+  </script>
+</body>
+</html>
