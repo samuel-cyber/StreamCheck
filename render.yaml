@@ -4,7 +4,7 @@ services:
   - type: web
     name: riparia-api
     runtime: python
-    plan: starter
+    plan: free
     healthCheckPath: /api/health
     buildCommand: pip install -r requirements.txt && alembic upgrade head
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 2
@@ -39,4 +39,4 @@ services:
 
 databases:
   - name: riparia-db
-    plan: basic-256mb
+    plan: free
