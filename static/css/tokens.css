@@ -1,0 +1,179 @@
+/* ============================================================
+   Riparia Design System — tokens + base + shared components
+   Light/dark via [data-theme] on <html>, persisted in localStorage.
+   ============================================================ */
+
+:root {
+  /* type */
+  --font-ui: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Instrument Serif", Georgia, serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", monospace;
+
+  /* palette — deep water + mineral accent, not clip-art green */
+  --bg: #f7f8fa;
+  --bg-raised: #ffffff;
+  --bg-sunken: #eef0f3;
+  --ink: #101828;
+  --ink-2: #475467;
+  --ink-3: #98a2b3;
+  --line: #e4e7ec;
+  --line-strong: #d0d5dd;
+
+  --brand: #0e5e63;          /* deep teal — water + health */
+  --brand-strong: #0a4a4f;
+  --brand-ink: #073a3e;
+  --brand-tint: #e6f2f2;
+  --accent: #b45309;         /* mineral amber — confidence/review accents */
+  --accent-tint: #fdf1e3;
+
+  --ok: #067647;
+  --ok-tint: #e7f4ec;
+  --warn: #b54708;
+  --warn-tint: #fdf3e7;
+  --danger: #b42318;
+  --danger-tint: #fdeeec;
+
+  --shadow-sm: 0 1px 2px rgb(16 24 40 / 0.06), 0 1px 3px rgb(16 24 40 / 0.08);
+  --shadow-md: 0 2px 6px rgb(16 24 40 / 0.07), 0 4px 16px rgb(16 24 40 / 0.08);
+  --shadow-lg: 0 8px 24px rgb(16 24 40 / 0.12), 0 20px 48px rgb(16 24 40 / 0.10);
+
+  --radius: 10px;
+  --radius-lg: 16px;
+  --speed: 180ms;
+  --ease: cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+
+[data-theme="dark"] {
+  --bg: #0b1016;
+  --bg-raised: #121a23;
+  --bg-sunken: #0d131a;
+  --ink: #e7edf3;
+  --ink-2: #9aa8b5;
+  --ink-3: #5d6b78;
+  --line: #1f2a36;
+  --line-strong: #2b3947;
+
+  --brand: #3ec3c9;
+  --brand-strong: #6bd3d8;
+  --brand-ink: #b7e7ea;
+  --brand-tint: #10333a;
+  --accent: #e8a04c;
+  --accent-tint: #3a2a14;
+
+  --ok: #4ade80;
+  --ok-tint: #12301e;
+  --warn: #fbbf24;
+  --warn-tint: #33260d;
+  --danger: #f87171;
+  --danger-tint: #3a1512;
+
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.5);
+  --shadow-md: 0 2px 6px rgb(0 0 0 / 0.45), 0 6px 20px rgb(0 0 0 / 0.4);
+  --shadow-lg: 0 10px 30px rgb(0 0 0 / 0.55);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { color-scheme: light; }
+html[data-theme="dark"] { color-scheme: dark; }
+
+body {
+  font-family: var(--font-ui);
+  background: var(--bg);
+  color: var(--ink);
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  transition: background var(--speed) var(--ease), color var(--speed) var(--ease);
+}
+
+h1, h2, h3 { font-weight: 600; letter-spacing: -0.015em; }
+.display { font-family: var(--font-display); font-weight: 400; letter-spacing: -0.02em; }
+
+a { color: var(--brand); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+
+/* ---------- shared components ---------- */
+.container { max-width: 1080px; margin: 0 auto; padding: 0 20px; }
+
+.card {
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 20px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  font: 600 0.9rem/1 var(--font-ui);
+  cursor: pointer;
+  transition: transform var(--speed) var(--ease), box-shadow var(--speed) var(--ease),
+              background var(--speed) var(--ease), border-color var(--speed) var(--ease);
+}
+.btn:active { transform: translateY(1px); }
+.btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.btn-primary { background: var(--brand); color: #fff; }
+.btn-primary:hover:not(:disabled) { background: var(--brand-strong); box-shadow: var(--shadow-md); }
+[data-theme="dark"] .btn-primary { color: #062226; }
+
+.btn-ghost { background: transparent; color: var(--ink-2); border-color: var(--line-strong); }
+.btn-ghost:hover:not(:disabled) { border-color: var(--ink-3); color: var(--ink); }
+
+.btn-approve { background: var(--ok); color: #fff; }
+.btn-approve:hover:not(:disabled) { filter: brightness(1.08); box-shadow: var(--shadow-md); }
+.btn-reject { background: transparent; color: var(--danger); border-color: var(--danger); }
+.btn-reject:hover:not(:disabled) { background: var(--danger-tint); }
+
+.chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 12px; border-radius: 999px;
+  font: 500 0.78rem/1.4 var(--font-ui);
+  background: var(--brand-tint); color: var(--brand-ink);
+  border: 1px solid color-mix(in srgb, var(--brand) 18%, transparent);
+}
+.chip.muted { background: var(--bg-sunken); color: var(--ink-3); border-color: var(--line); }
+.chip.ok { background: var(--ok-tint); color: var(--ok); }
+.chip.warn { background: var(--warn-tint); color: var(--warn); }
+.chip.danger { background: var(--danger-tint); color: var(--danger); }
+
+/* confidence meter — reveals on scroll/in-view */
+.meter { position: relative; height: 8px; border-radius: 999px; background: var(--bg-sunken); overflow: hidden; }
+.meter > i {
+  position: absolute; inset: 0 auto 0 0; width: 0;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--brand), var(--accent));
+  transition: width 900ms var(--ease);
+}
+
+.theme-toggle {
+  background: transparent; border: 1px solid var(--line-strong);
+  border-radius: 8px; padding: 8px 10px; cursor: pointer;
+  color: var(--ink-2); display: inline-flex; align-items: center; gap: 6px;
+  font: 500 0.8rem var(--font-ui);
+}
+.theme-toggle:hover { color: var(--ink); border-color: var(--ink-3); }
+
+.skeleton {
+  background: linear-gradient(90deg, var(--bg-sunken) 25%, var(--line) 50%, var(--bg-sunken) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+  border-radius: var(--radius);
+}
+@keyframes shimmer { to { background-position: -200% 0; } }
+
+.state-block { text-align: center; padding: 56px 20px; color: var(--ink-2); }
+.state-block h2 { font-size: 1.05rem; margin-bottom: 6px; color: var(--ink); }
+.state-block p { font-size: 0.9rem; }

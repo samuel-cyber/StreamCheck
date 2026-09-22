@@ -1,9 +1,9 @@
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import httpx
 
-from .config import FHIR_BASE_URL
+from .config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -33,13 +33,14 @@ def observation_to_fhir(
             for indicator in ai_indicators
         ],
         "note": [{"text": f"Confidence: {ai_confidence}"}],
-        "effectiveDateTime": created_at.astimezone(timezone.utc).isoformat().replace("+00:00", "Z"),
+        # Some FHIR servers (HAPI's public instance) reject offsets like +00:00.
+        "effectiveDateTime": created_at.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
     }
 
 
 def post_to_fhir(resource: dict) -> str:
     """POST the resource to the FHIR server and return the created resource id."""
-    url = f"{FHIR_BASE_URL}/Observation"
+    url = f"{settings.FHIR_BASE_URL}/Observation"
     try:
         resp = httpx.post(url, json=resource, timeout=TIMEOUT)
     except httpx.HTTPError as exc:

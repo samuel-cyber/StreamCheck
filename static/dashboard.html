@@ -1,154 +1,260 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>StreamCheck — Reviewer Dashboard</title>
+  <title>Review queue — Riparia</title>
+  <meta name="description" content="Reviewer console: AI-assessed citizen observations awaiting human confirmation.">
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#0b1016">
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/tokens.css">
   <style>
-    :root { --bg: #f8f9fa; --card: #ffffff; --accent: #2563eb; --reject: #dc2626; --approve: #16a34a; --muted: #6b7280; --border: #e5e7eb; --radius: 12px; }
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: #1f2937; line-height: 1.6; }
-    header { background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%); color: white; padding: 24px 32px; }
-    header h1 { font-size: 1.5rem; font-weight: 700; }
-    header p { opacity: 0.85; font-size: 0.9rem; margin-top: 4px; }
-    .badge-row { display: flex; gap: 12px; margin-top: 12px; font-size: 0.85rem; }
-    .badge { background: rgba(255,255,255,0.15); padding: 4px 12px; border-radius: 20px; }
-    main { max-width: 960px; margin: 24px auto; padding: 0 16px; }
-    .empty { text-align: center; padding: 64px 16px; color: var(--muted); }
-    .empty h2 { font-size: 1.2rem; margin-bottom: 8px; }
-    .obs-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
-    .obs-card .photo-wrap { width: 100%; max-height: 320px; overflow: hidden; border-radius: 8px; margin-bottom: 16px; background: #f0f0f0; display: flex; align-items: center; justify-content: center; }
-    .obs-card .photo-wrap img { width: 100%; object-fit: cover; max-height: 320px; }
-    .obs-card h3 { font-size: 1rem; font-weight: 600; margin-bottom: 4px; }
-    .obs-card .meta { font-size: 0.8rem; color: var(--muted); margin-bottom: 12px; }
-    .obs-card .text-desc { font-size: 0.95rem; margin-bottom: 12px; }
-    .indicator-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
-    .chip { background: #eff6ff; color: var(--accent); border-radius: 20px; padding: 4px 12px; font-size: 0.8rem; font-weight: 500; }
-    .confidence { display: inline-block; font-weight: 600; padding: 2px 10px; border-radius: 20px; font-size: 0.85rem; margin-bottom: 12px; }
-    .confidence.high { background: #dcfce7; color: #15803d; }
-    .confidence.med { background: #fef3c7; color: #92400e; }
-    .confidence.low { background: #fee2e2; color: #991b1b; }
-    .reasoning { background: #f9fafb; border-left: 3px solid var(--accent); padding: 12px 16px; border-radius: 0 8px 8px 0; font-size: 0.9rem; margin-bottom: 16px; white-space: pre-wrap; }
-    .actions { display: flex; gap: 12px; }
-    .btn { padding: 10px 24px; border: none; border-radius: 8px; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: opacity 0.15s; }
-    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-    .btn-approve { background: var(--approve); color: white; }
-    .btn-reject { background: var(--reject); color: white; }
-    .btn:hover:not(:disabled) { opacity: 0.85; }
-    .result-msg { margin-top: 8px; font-size: 0.85rem; padding: 8px 12px; border-radius: 6px; }
-    .result-msg.success { background: #dcfce7; color: #15803d; }
-    .result-msg.error { background: #fee2e2; color: #991b1b; }
-    .refresh-bar { text-align: center; margin-bottom: 16px; }
-    .refresh-bar button { background: var(--accent); color: white; border: none; padding: 8px 20px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; font-weight: 500; }
-    .fhir-id { font-size: 0.8rem; color: var(--muted); margin-top: 4px; }
+    header.site { border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 40; background: color-mix(in srgb, var(--bg) 85%, transparent); backdrop-filter: blur(10px); }
+    .nav { display: flex; align-items: center; justify-content: space-between; height: 64px; gap: 12px; }
+    .logo { display: flex; align-items: center; gap: 10px; font-weight: 700; color: var(--ink); }
+    .logo svg { width: 26px; height: 26px; }
+    .who { font: 400 0.8rem var(--font-mono); color: var(--ink-3); margin-right: 4px; }
+
+    main { max-width: 880px; margin: 0 auto; padding: 36px 20px 90px; }
+    .title-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 6px; }
+    .title-row h1 { font-size: clamp(1.6rem, 3.5vw, 2.1rem); }
+    .title-row .meta { font: 400 0.78rem var(--font-mono); color: var(--ink-3); }
+    .sub { color: var(--ink-2); font-size: 0.92rem; margin-bottom: 22px; }
+    kbd {
+      font: 500 0.68rem var(--font-mono); border: 1px solid var(--line-strong);
+      border-bottom-width: 2px; border-radius: 5px; padding: 1px 5px; color: var(--ink-2);
+    }
+
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 26px; }
+    .stat { padding: 14px 18px; }
+    .stat b { display: block; font-size: 1.35rem; font-weight: 600; letter-spacing: -0.02em; }
+    .stat span { font-size: 0.76rem; color: var(--ink-3); }
+
+    /* review card */
+    .review { overflow: hidden; margin-bottom: 22px; transition: opacity 300ms var(--ease), transform 300ms var(--ease); }
+    .review.resolved { opacity: 0; transform: scale(0.985); }
+    .review-top { display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; border-bottom: 1px solid var(--line); background: var(--bg-sunken); }
+    .review-top .id { font: 500 0.75rem var(--font-mono); color: var(--ink-3); }
+    .review-grid { display: grid; grid-template-columns: 340px 1fr; }
+    .photo-pane { border-right: 1px solid var(--line); background: var(--bg-sunken); min-height: 280px; position: relative; }
+    .photo-pane img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .content-pane { padding: 22px 24px; display: flex; flex-direction: column; gap: 16px; }
+    .quote {
+      font-size: 0.98rem; color: var(--ink); border-left: 3px solid var(--brand);
+      padding: 4px 0 4px 14px; font-style: italic;
+    }
+    .quote .citizen { display: block; font: 500 0.68rem var(--font-mono); color: var(--ink-3); font-style: normal; margin-top: 6px; letter-spacing: 0.05em; text-transform: uppercase; }
+
+    .conf-block .row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+    .conf-block .label { font: 500 0.7rem var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-3); }
+    .conf-block .val { font: 600 0.95rem var(--font-mono); }
+
+    .ai-note { background: var(--bg-raised); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; font-size: 0.9rem; color: var(--ink-2); }
+    .ai-note .ai-tag { font: 500 0.66rem var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--brand); display: block; margin-bottom: 6px; }
+
+    .decide { display: flex; gap: 10px; margin-top: auto; }
+    .decide .btn { flex: 1; justify-content: center; }
+    .verdict { padding: 14px 20px; border-top: 1px solid var(--line); font-size: 0.85rem; }
+    .verdict.ok { background: var(--ok-tint); color: var(--ok); }
+    .verdict.err { background: var(--danger-tint); color: var(--danger); }
+    .verdict a { margin-left: 10px; }
+
+    @media (max-width: 760px) {
+      .review-grid { grid-template-columns: 1fr; }
+      .photo-pane { border-right: none; border-bottom: 1px solid var(--line); max-height: 260px; }
+      .stats { grid-template-columns: 1fr 1fr; }
+    }
   </style>
 </head>
 <body>
-  <header>
-    <h1>StreamCheck — Reviewer Dashboard</h1>
-    <p>AI supports. A human decides.</p>
-    <div class="badge-row">
-      <span class="badge" id="pending-count">Pending: —</span>
-      <span class="badge" id="approved-count">Approved: —</span>
-      <span class="badge" id="rejected-count">Rejected: —</span>
+  <header class="site">
+    <div class="container nav">
+      <a class="logo" href="/" aria-label="Riparia home">
+        <svg viewBox="0 0 32 32" fill="none" aria-hidden="true"><rect width="32" height="32" rx="8" fill="var(--brand)"/><path d="M7 19c2.5 0 2.5-2 5-2s2.5 2 5 2 2.5-2 5-2 2.5 2 3 2" stroke="#fff" stroke-width="2" stroke-linecap="round"/><path d="M7 24c2.5 0 2.5-2 5-2s2.5 2 5 2 2.5-2 5-2 2.5 2 3 2" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity=".55"/><circle cx="22" cy="9.5" r="3.5" stroke="#fff" stroke-width="2"/></svg>
+        Riparia
+      </a>
+      <nav style="display:flex;gap:10px;align-items:center" aria-label="Primary">
+        <span class="who" id="who"></span>
+        <button class="theme-toggle" data-theme-toggle aria-pressed="false" aria-label="Toggle dark mode">◐</button>
+        <button class="btn btn-ghost" id="logout-btn">Sign out</button>
+      </nav>
     </div>
   </header>
+
   <main>
-    <div class="refresh-bar">
-      <button onclick="loadQueue()">Refresh queue</button>
+    <div class="title-row">
+      <h1 class="display">Review queue</h1>
+      <span class="meta" id="updated-at"></span>
     </div>
-    <div id="queue"></div>
+    <p class="sub">AI flags the signals — you make the call. <kbd>A</kbd> approves, <kbd>R</kbd> rejects the highlighted observation.</p>
+
+    <div class="stats" aria-label="Queue statistics">
+      <div class="card stat"><b id="stat-pending">–</b><span>awaiting review</span></div>
+      <div class="card stat"><b id="stat-approved">–</b><span>committed to FHIR</span></div>
+      <div class="card stat"><b id="stat-rejected">–</b><span>rejected</span></div>
+    </div>
+
+    <div id="queue" aria-live="polite"></div>
   </main>
+
+  <script src="/js/app.js"></script>
   <script>
-    const API = '';
+    const queueEl = document.getElementById("queue");
+    let items = [];
+    let focusIdx = 0;
+
+    function csrfToken() {
+      const m = document.cookie.match(/(?:^|;\s*)riparia_csrf=([^;]+)/);
+      return m ? decodeURIComponent(m[1]) : "";
+    }
+
+    function skeletonCard() {
+      return `<div class="card review"><div class="review-grid">
+        <div class="photo-pane skeleton" style="height:280px"></div>
+        <div class="content-pane">
+          <div class="skeleton" style="height:18px;width:80%"></div>
+          <div class="skeleton" style="height:56px"></div>
+          <div class="skeleton" style="height:12px;width:40%"></div>
+        </div></div></div>`;
+    }
+
+    function confTone(c) { return c >= 0.75 ? "ok" : c >= 0.5 ? "warn" : "danger"; }
+
+    function card(o, idx) {
+      const pct = Math.round((o.ai_confidence ?? 0) * 100);
+      const chips = (o.ai_indicators ?? []).map(i => `<span class="chip">${escapeHtml(i.replaceAll("_", " "))}</span>`).join("");
+      const when = new Date(o.created_at).toLocaleString();
+      return `
+      <article class="card review" data-id="${o.id}" data-idx="${idx}" tabindex="0" aria-label="Observation ${o.id}">
+        <div class="review-top">
+          <span class="id">OBS-${String(o.id).padStart(4, "0")}</span>
+          <span class="id">${escapeHtml(when)}</span>
+        </div>
+        <div class="review-grid">
+          <div class="photo-pane"><img src="${escapeHtml(o.photo_url)}" alt="Citizen-submitted stream photo" loading="lazy"></div>
+          <div class="content-pane">
+            <blockquote class="quote">${escapeHtml(o.text_description)}<span class="citizen">Citizen report</span></blockquote>
+            <div class="conf-block">
+              <div class="row"><span class="label">AI confidence</span><span class="val">${pct}%</span></div>
+              <div class="meter"><i data-w="${pct}"></i></div>
+            </div>
+            <div class="ai-note">
+              <span class="ai-tag">AI assessment</span>
+              ${escapeHtml(o.ai_reasoning)}
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">${chips || '<span class="chip muted">no indicators detected</span>'}</div>
+            <div class="decide">
+              <button class="btn btn-approve" data-act="approve">✓ Approve &amp; commit</button>
+              <button class="btn btn-reject" data-act="reject">✗ Reject</button>
+            </div>
+          </div>
+        </div>
+        <div class="verdict-slot"></div>
+      </article>`;
+    }
+
+    function showVerdict(el, cls, html) {
+      const slot = el.querySelector(".verdict-slot");
+      slot.innerHTML = `<div class="verdict ${cls} fade-in">${html}</div>`;
+    }
+
+    async function decide(el, action) {
+      const id = el.dataset.id;
+      const buttons = el.querySelectorAll(".decide .btn");
+      buttons.forEach(b => b.disabled = true);
+      try {
+        const updated = await api(`/api/v1/observations/${id}/${action}`, {
+          method: "POST",
+          headers: { "X-CSRF-Token": csrfToken() },
+        });
+        if (action === "approve") {
+          showVerdict(el, "ok", `✓ Committed to FHIR — Observation/${escapeHtml(updated.fhir_id)}<a target="_blank" rel="noopener" href="${escapeHtml(FHIR_BASE)}${escapeHtml(updated.fhir_id)}">view resource ↗</a>`);
+        } else {
+          showVerdict(el, "ok", `✗ Rejected — nothing sent to FHIR`);
+        }
+        el.classList.add("resolved");
+        setTimeout(() => { el.remove(); loadStats(); }, 700);
+      } catch (err) {
+        buttons.forEach(b => b.disabled = false);
+        if (err.status === 401) { location.href = "/login.html"; return; }
+        showVerdict(el, "err", `⚠ ${escapeHtml(err.message)}`);
+      }
+    }
+
+    const FHIR_BASE = "https://hapi.fhir.org/baseR4/Observation/";
+
+    function bindCard(el) {
+      el.querySelectorAll(".decide .btn").forEach(btn => {
+        btn.addEventListener("click", () => decide(el, btn.dataset.act));
+      });
+      el.addEventListener("focus", () => { focusIdx = +el.dataset.idx; });
+    }
+
+    async function loadStats() {
+      try {
+        const all = await api("/api/v1/observations?limit=100");
+        const count = s => all.items.filter(i => i.status === s).length;
+        document.getElementById("stat-approved").textContent = count("approved");
+        document.getElementById("stat-rejected").textContent = count("rejected");
+      } catch { /* stats are non-critical */ }
+    }
 
     async function loadQueue() {
-      const [pending, approved, rejected] = await Promise.all([
-        fetch(API + '/queue').then(r => r.json()),
-        fetch(API + '/observations?status=approved').then(r => r.json()),
-        fetch(API + '/observations?status=rejected').then(r => r.json()),
-      ]);
-      document.getElementById('pending-count').textContent = `Pending: ${pending.length}`;
-      document.getElementById('approved-count').textContent = `Approved: ${approved.length}`;
-      document.getElementById('rejected-count').textContent = `Rejected: ${rejected.length}`;
-      const container = document.getElementById('queue');
-      if (pending.length === 0 && approved.length === 0 && rejected.length === 0) {
-        container.innerHTML = '<div class="empty"><h2>No observations yet</h2><p>Submit one from the <a href="/index.html">citizen form</a>.</p></div>';
-        return;
-      }
-      let html = '';
-      // Pending first
-      if (pending.length > 0) {
-        html += '<h2 style="margin-bottom:12px">Pending Review</h2>';
-        pending.forEach(obs => { html += renderCard(obs, true); });
-      }
-      if (approved.length > 0) {
-        html += '<h2 style="margin:24px 0 12px">Approved</h2>';
-        approved.forEach(obs => { html += renderCard(obs, false); });
-      }
-      if (rejected.length > 0) {
-        html += '<h2 style="margin:24px 0 12px">Rejected</h2>';
-        rejected.forEach(obs => { html += renderCard(obs, false); });
-      }
-      container.innerHTML = html;
-    }
+      queueEl.innerHTML = skeletonCard() + skeletonCard();
+      try {
+        const data = await api("/api/v1/queue");
+        items = data.items ?? [];
+        document.getElementById("stat-pending").textContent = items.length;
+        document.getElementById("updated-at").textContent = "updated " + new Date().toLocaleTimeString();
 
-    function confidenceClass(c) { return c >= 0.75 ? 'high' : c >= 0.5 ? 'med' : 'low'; }
-
-    function renderCard(obs, showActions) {
-      const indicators = (obs.ai_indicators || []).map(i => `<span class="chip">${i.replace(/_/g, ' ')}</span>`).join('');
-      const confPct = Math.round(obs.ai_confidence * 100);
-      const statusLabel = obs.status === 'approved' ? '✅ Approved' : obs.status === 'rejected' ? '❌ Rejected' : '⏳ Pending';
-      let actionsHtml = '';
-      if (showActions) {
-        actionsHtml = `
-          <div class="actions">
-            <button class="btn btn-approve" onclick="approveObs(${obs.id})">✓ Approve</button>
-            <button class="btn btn-reject" onclick="rejectObs(${obs.id})">✗ Reject</button>
-          </div>
-          <div id="result-${obs.id}"></div>`;
-      }
-      const fhirHtml = obs.fhir_id ? `<div class="fhir-id">FHIR ID: ${obs.fhir_id}</div>` : '';
-      return `
-        <div class="obs-card" id="card-${obs.id}">
-          <div class="photo-wrap"><img src="${obs.photo_url}" alt="Submitted photo" loading="lazy"></div>
-          <div class="meta">${statusLabel} · Observation #${obs.id} · ${new Date(obs.created_at).toLocaleString()}</div>
-          <h3>Citizen description</h3>
-          <p class="text-desc">${escapeHtml(obs.text_description)}</p>
-          <div class="indicator-chips">${indicators || '<span class="chip" style="background:#f3f4f6;color:#6b7280">no indicators detected</span>'}</div>
-          <span class="confidence ${confidenceClass(obs.ai_confidence)}">Confidence: ${confPct}%</span>
-          <h3>AI reasoning</h3>
-          <div class="reasoning">${escapeHtml(obs.ai_reasoning)}</div>
-          ${fhirHtml}
-          ${actionsHtml}
+        if (!items.length) {
+          queueEl.innerHTML = `<div class="card state-block">
+            <h2>Queue clear</h2>
+            <p>Every observation has been reviewed. New citizen submissions will appear here automatically.</p>
+          </div>`;
+          return;
+        }
+        queueEl.innerHTML = items.map(card).join("");
+        queueEl.querySelectorAll(".review").forEach(el => {
+          bindCard(el);
+          requestAnimationFrame(() => {
+            const bar = el.querySelector(".meter i");
+            if (bar) bar.style.width = bar.dataset.w + "%";
+          });
+        });
+        loadStats();
+      } catch (err) {
+        if (err.status === 401) { location.href = "/login.html"; return; }
+        queueEl.innerHTML = `<div class="card state-block">
+          <h2>Couldn't load the queue</h2>
+          <p>${escapeHtml(err.message)}</p>
+          <p style="margin-top:12px"><button class="btn btn-ghost" onclick="loadQueue()">Retry</button></p>
         </div>`;
+      }
     }
 
-    function escapeHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+    // keyboard shortcuts
+    document.addEventListener("keydown", (e) => {
+      if (e.target.matches("input, textarea")) return;
+      const el = queueEl.querySelector(`.review[data-idx="${focusIdx}"]`);
+      if (!el) return;
+      if (e.key === "a" || e.key === "A") decide(el, "approve");
+      if (e.key === "r" || e.key === "R") decide(el, "reject");
+    });
 
-    async function approveObs(id) {
-      const el = document.getElementById('result-' + id);
-      el.innerHTML = 'Approving...';
-      try {
-        const res = await fetch(API + '/observations/' + id + '/approve', { method: 'POST' });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.detail || 'Approve failed');
-        el.innerHTML = `<div class="result-msg success">Approved! FHIR ID: ${data.fhir_id}</div>`;
-        setTimeout(loadQueue, 800);
-      } catch (e) { el.innerHTML = `<div class="result-msg error">${escapeHtml(e.message)}</div>`; }
-    }
+    document.getElementById("logout-btn").addEventListener("click", async () => {
+      try { await api("/api/v1/auth/logout", { method: "POST" }); } catch {}
+      location.href = "/login.html";
+    });
 
-    async function rejectObs(id) {
-      const el = document.getElementById('result-' + id);
-      el.innerHTML = 'Rejecting...';
-      try {
-        const res = await fetch(API + '/observations/' + id + '/reject', { method: 'POST' });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.detail || 'Reject failed');
-        el.innerHTML = `<div class="result-msg success">Rejected.</div>`;
-        setTimeout(loadQueue, 800);
-      } catch (e) { el.innerHTML = `<div class="result-msg error">${escapeHtml(e.message)}</div>`; }
-    }
+    // Show who is signed in (best effort)
+    api("/api/v1/observations?limit=1").then(() => {
+      document.getElementById("who").textContent = "reviewer";
+    }).catch(() => {});
 
     loadQueue();
   </script>

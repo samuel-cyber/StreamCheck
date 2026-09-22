@@ -1,0 +1,42 @@
+# Render Blueprint — one file spins up the whole stack.
+# Deploy: Render Dashboard → New → Blueprint → point at this repo.
+services:
+  - type: web
+    name: riparia-api
+    runtime: python
+    plan: starter
+    healthCheckPath: /api/health
+    buildCommand: pip install -r requirements.txt && alembic upgrade head
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 2
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: PYTHON_VERSION
+        value: "3.14.6"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: riparia-db
+          property: connectionString
+      - key: SESSION_SECRET
+        generateValue: true
+      # Secrets below are set once in the Render dashboard (sync: false).
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: R2_ACCOUNT_ID
+        sync: false
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false
+      - key: R2_BUCKET
+        sync: false
+      - key: PUBLIC_BASE_URL
+        sync: false
+      - key: ALLOWED_ORIGINS
+        sync: false
+      - key: REVIEWER_PASSWORD_HASH
+        sync: false
+
+databases:
+  - name: riparia-db
+    plan: basic-256mb

@@ -1,165 +1,89 @@
-# StreamCheck
+# Riparia
 
-**AI-Supported Freshwater Stream Assessment — Middleware Validation Layer**
+**Validation middleware for citizen freshwater observations — from citizen photos to public-health intelligence.**
 
-Built for the [OneAquaHealth IEEE Global Hackathon](https://devpost.com) (Track 3: AI-Supported Assessment).
+Riparia sits behind citizen-science channels (the submission form here, or a partner app) and turns raw observations into trustworthy, interoperable health data:
 
----
-
-## What is StreamCheck?
-
-StreamCheck is a middleware validation layer that sits behind citizen science apps like OneAquaHealth's. It:
-
-1. **Assesses** citizen-submitted photos + text against specific ecological indicators using AI (Gemini vision model)
-2. **Explains** the assessment in plain language — confidence score + reasoning trail
-3. **Standardizes** approved observations into HL7 FHIR Observations
-4. **Requires human approval** — AI assists, a person decides
-
-> *"Use AI responsibly to support stream assessment without replacing human judgment."* — Track 3 framing
-
----
-
-## Quick Start
-
-### 1. Install dependencies
-
-```bash
-py -m pip install -r requirements.txt
-```
-
-### 2. Configure (optional)
-
-```bash
-copy .env.example .env
-```
-
-Set `GEMINI_API_KEY` to enable real AI assessment. Without it, the app runs in mock mode with keyword-based fake AI output.
-
-### 3. Start the server
-
-```bash
-py -m uvicorn app.main:app --reload --port 8000
-```
-
-### 4. Open the apps
-
-- **Citizen form:** http://localhost:8000/
-- **Reviewer dashboard:** http://localhost:8000/dashboard.html
-
-### 5. Demo the full flow
-
-1. Submit a photo + description on the citizen form
-2. Open the reviewer dashboard, see the AI's assessment
-3. Click Approve → observation is mapped to FHIR and POSTed to the HAPI server
-4. Click Reject → observation is marked rejected, nothing sent to FHIR
-
----
-
-## Running a local FHIR server (optional)
-
-For the demo, StreamCheck posts to the public HAPI test server at `https://hapi.fhir.org/baseR4`. To run your own:
-
-```bash
-docker compose up -d
-# Then set FHIR_BASE_URL=http://localhost:8080/fhir in your .env
-```
+1. **AI assessment** — every submission is analyzed against published OneAquaHealth urban-stream indicators, returning detected indicators, a confidence score, and a plain-language rationale.
+2. **Human confirmation** — reviewers see the evidence and the AI's reasoning; nothing is committed without a person's decision.
+3. **Standards-grade output** — approved observations are committed as HL7 FHIR `Observation` resources, readable by municipal and public-health systems.
 
 ---
 
 ## Architecture
 
 ```
-Citizen Science App
-       │
-       ▼
-┌──────────────┐    ┌────────────────┐    ┌──────────────┐
-│  POST        │    │  AI Assessment  │    │  HAPI FHIR   │
-│  /observations│───▶│  (Gemini API)  │    │  Server      │
-│  (photo+text)│    │  → indicators   │    │  (Observation│
-└──────────────┘    │  → confidence   │    │   resource)  │
-                    │  → reasoning    │    └──────┬───────┘
-                    └───────┬────────┘           │
-                            │ pending             │
-                            ▼                     │
-                    ┌───────────────┐             │
-                    │   Reviewer    │             │
-                    │   Dashboard   │─────────────┘
-                    │  ✓ Approve    │   (on approval:
-                    │  ✗ Reject     │    FHIR POST)
-                    └───────────────┘
+Citizen submission ──▶ Upload sanitizer ──▶ AI assessment (Gemini vision)
+                              │                      │
+                              ▼                      ▼
+                      Object storage (R2)      Pending observation (PostgreSQL)
+                                                     │
+                                             Reviewer console (session auth)
+                                                     │ approve
+                                                     ▼
+                                        HL7 FHIR Observation ──▶ FHIR server
 ```
 
-### Ecological Indicators
-
-StreamCheck evaluates submissions against these specific indicators (from OneAquaHealth research):
-
-| Indicator | What it means |
-|---|---|
-| Riparian vegetation degradation | Loss of streamside plant cover — habitat loss, erosion risk |
-| Artificial light at night | Light pollution near water — disrupts aquatic ecosystems |
-| Trash or debris | Visible pollution — physical hazard, contamination risk |
-| Chemical/pharmaceutical contamination | Unusual color, foam, odor — potential health hazard |
-
-### FHIR Compliance
-
-Approved observations are mapped to standard HL7 FHIR `Observation` resources with:
-- Valid resource structure (`resourceType`, `status`, `code`, `valueString`, `component`, `note`, `effectiveDateTime`)
-- Posted to a HAPI FHIR server (real compliance, not a simulated schema)
-- Resource IDs stored back on the local observation record
-
----
-
-## Environment Variables
-
-| Variable | Default | Description |
+| Layer | Choice | Why |
 |---|---|---|
-| `GEMINI_API_KEY` | *(empty — mock mode)* | Google Gemini API key for AI assessment |
-| `GEMINI_MODEL` | `gemini-2.0-flash` | Gemini model to use |
-| `FHIR_BASE_URL` | `https://hapi.fhir.org/baseR4` | FHIR server base URL |
-| `PUBLIC_BASE_URL` | `http://localhost:8000` | Public URL for photo links |
+| API | FastAPI (Python 3.11+) | typed validation, OpenAPI docs, async where it matters |
+| DB | PostgreSQL (Render managed) | managed, backed up; SQLite for local dev |
+| Migrations | Alembic | versioned schema, runs on deploy |
+| AI | Gemini vision (`google-genai`) | single well-prompted call; strict output sanitization |
+| Photos | Cloudflare R2 (S3 API) | private bucket, zero egress fees, signed-URL delivery |
+| Auth | bcrypt + signed session cookies + CSRF | small auditable surface, no third-party identity dependency |
+| Frontend | Static HTML/CSS/JS | zero build step; design-token system with dark mode |
 
----
-
-## Tech Stack
-
-- **Backend:** Python 3.11+ / FastAPI / SQLite / SQLModel
-- **AI:** Google Gemini (vision + text) via `google-genai` SDK
-- **Standards:** HL7 FHIR via HAPI FHIR server
-- **Frontend:** Plain HTML + vanilla JS (zero build step)
-
----
-
-## Project Structure
+## Repository layout
 
 ```
-streamcheck/
 ├── app/
-│   ├── main.py          # FastAPI routes + static file serving
-│   ├── models.py        # SQLite data model (Observation)
-│   ├── ai.py            # Gemini AI service + mock mode
-│   ├── fhir.py          # FHIR mapping + HAPI client
-│   └── config.py        # Environment configuration
-├── static/
-│   ├── index.html       # Citizen submission form
-│   └── dashboard.html   # Reviewer dashboard
-├── data/                # SQLite DB + uploaded photos (gitignored)
-├── docker-compose.yml   # HAPI FHIR server config
-├── requirements.txt
-└── README.md
+│   ├── main.py            # API v1, middleware, static serving
+│   ├── config.py          # typed settings (env-driven)
+│   ├── db.py              # engine + sessions (SQLite dev / Postgres prod)
+│   ├── models.py          # Observation model + indexes
+│   ├── ai.py              # Gemini assessment pipeline
+│   ├── fhir.py            # FHIR mapping + HTTP client
+│   ├── storage.py         # R2 signed-URL photo storage
+│   ├── photo_sanitizer.py # upload hardening (sniff, strip EXIF, re-encode)
+│   └── auth.py            # reviewer sessions + CSRF
+├── migrations/            # Alembic
+├── static/                # landing, submit, dashboard, login
+├── tests/                 # pytest API tests
+├── scripts/               # standalone FHIR payload test
+├── render.yaml            # Render blueprint (web + Postgres)
+└── .github/workflows/     # CI (ruff + pytest)
 ```
 
----
+## Local development
 
-## Why This Wins (Judging Criteria)
+```bash
+py -m pip install -r requirements.txt
+copy .env.example .env          # fill in what you have; everything degrades gracefully
+py -m uvicorn app.main:app --reload --port 8000
+```
 
-- **Impact & Alignment:** Grounded in OneAquaHealth's real published indicators; augments existing infrastructure
-- **Innovation:** Validates + standardizes citizen data into FHIR — most entrants build another reporting app
-- **Architecture:** Real FHIR compliance via HAPI server demonstrates technical rigor
-- **UX:** The reviewer dashboard has exactly one job — "AI supports, human decides" — visible in every card
-- **Scale:** Framed as adoptable middleware any municipality could plug in
+- Landing page: http://localhost:8000/
+- Citizen form: http://localhost:8000/submit.html
+- Reviewer console: http://localhost:8000/dashboard.html (dev login `reviewer` / `reviewer-dev-password`)
+- API docs: http://localhost:8000/docs
 
----
+Without a `GEMINI_API_KEY` the AI pipeline runs in deterministic preview mode; without R2 keys photos are stored under `data/` (gitignored). Nothing external is required to run the stack.
+
+## Tests & checks
+
+```bash
+py -m ruff check app migrations tests
+py -m pytest -q
+py scripts/test_fhir_mapping.py    # static FHIR payload against the live FHIR server
+```
+
+## Deployment
+
+Full blueprint in `render.yaml` — see [DEPLOYMENT.md](DEPLOYMENT.md) for the complete step-by-step runbook (Render, Postgres, R2, DNS, verification).
+
+Security posture and known limitations: [SECURITY.md](SECURITY.md)
 
 ## License
 
-Hackathon prototype — not for production use.
+MIT — see [LICENSE](LICENSE).

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reviewer sign in — Riparia</title>
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#0b1016">
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/tokens.css">
+  <style>
+    body { display: grid; place-items: center; min-height: 100vh; }
+    main { width: min(400px, calc(100vw - 40px)); }
+    .brand { display: flex; align-items: center; justify-content: center; gap: 10px; font-weight: 700; font-size: 1.1rem; margin-bottom: 26px; }
+    .brand svg { width: 30px; height: 30px; }
+    form.card { padding: 30px; display: grid; gap: 16px; }
+    h1 { font-size: 1.25rem; text-align: center; }
+    p.sub { color: var(--ink-2); font-size: 0.86rem; text-align: center; margin-top: -6px; }
+    label { font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 6px; }
+    input {
+      width: 100%; padding: 11px 13px; border-radius: 8px;
+      border: 1px solid var(--line-strong); background: var(--bg-raised); color: var(--ink);
+      font: 400 0.92rem var(--font-ui);
+    }
+    input:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 18%, transparent); }
+    .btn { width: 100%; justify-content: center; }
+    .err { display: none; background: var(--danger-tint); color: var(--danger); border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent); border-radius: 8px; padding: 10px 14px; font-size: 0.85rem; }
+    .back { text-align: center; margin-top: 18px; font-size: 0.82rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="brand">
+      <svg viewBox="0 0 32 32" fill="none" aria-hidden="true"><rect width="32" height="32" rx="8" fill="var(--brand)"/><path d="M7 19c2.5 0 2.5-2 5-2s2.5 2 5 2 2.5-2 5-2 2.5 2 3 2" stroke="#fff" stroke-width="2" stroke-linecap="round"/><path d="M7 24c2.5 0 2.5-2 5-2s2.5 2 5 2 2.5-2 5-2 2.5 2 3 2" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity=".55"/><circle cx="22" cy="9.5" r="3.5" stroke="#fff" stroke-width="2"/></svg>
+      Riparia
+    </div>
+    <form class="card" id="login-form" novalidate>
+      <h1>Reviewer sign in</h1>
+      <p class="sub">Access is limited to program reviewers.</p>
+      <div class="err" id="err" role="alert"></div>
+      <div>
+        <label for="username">Username</label>
+        <input id="username" name="username" autocomplete="username" required>
+      </div>
+      <div>
+        <label for="password">Password</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" required>
+      </div>
+      <button class="btn btn-primary" id="go" type="submit">Sign in</button>
+    </form>
+    <p class="back"><a href="/">← Back to Riparia</a></p>
+  </main>
+  <script src="/js/app.js"></script>
+  <script>
+    const form = document.getElementById("login-form");
+    const err = document.getElementById("err");
+    const go = document.getElementById("go");
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      err.style.display = "none";
+      go.disabled = true; go.textContent = "Signing in…";
+      const fd = new FormData(form);
+      try {
+        const res = await fetch("/api/v1/auth/login", {
+          method: "POST",
+          credentials: "same-origin",
+          body: new URLSearchParams({ username: fd.get("username"), password: fd.get("password") }),
+        });
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(body?.detail?.message || "Sign in failed");
+        location.href = "/dashboard.html";
+      } catch (ex) {
+        err.textContent = ex.message;
+        err.style.display = "block";
+        go.disabled = false; go.textContent = "Sign in";
+      }
+    });
+  </script>
+</body>
+</html>

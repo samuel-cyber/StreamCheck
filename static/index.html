@@ -1,102 +1,203 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>StreamCheck — Submit Observation</title>
+  <title>Riparia — From citizen photos to public-health intelligence</title>
+  <meta name="description" content="Riparia validates citizen freshwater observations with AI against published urban-stream health indicators, then commits them as HL7 FHIR data for municipal and public-health systems.">
+  <meta property="og:title" content="Riparia — Freshwater intelligence, validated">
+  <meta property="og:description" content="AI-assisted assessment, human judgment, standards-grade interoperability for urban stream health.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="/assets/og-image.png">
+  <meta name="theme-color" content="#0b1016">
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/tokens.css">
   <style>
-    :root { --accent: #2563eb; --bg: #f8f9fa; --card: #ffffff; --border: #e5e7eb; --muted: #6b7280; --radius: 12px; }
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: #1f2937; }
-    header { background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%); color: white; padding: 24px 32px; }
-    header h1 { font-size: 1.4rem; font-weight: 700; }
-    header p { opacity: 0.85; font-size: 0.9rem; margin-top: 4px; }
-    main { max-width: 640px; margin: 24px auto; padding: 0 16px; }
-    .form-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
-    label { display: block; font-weight: 600; font-size: 0.9rem; margin-bottom: 6px; }
-    .hint { font-weight: 400; color: var(--muted); font-size: 0.8rem; display: block; margin-bottom: 6px; }
-    input[type="file"], textarea { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 0.9rem; font-family: inherit; margin-bottom: 16px; }
-    textarea { min-height: 100px; resize: vertical; }
-    .submit-btn { width: 100%; padding: 12px; background: var(--accent); color: white; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: opacity 0.15s; }
-    .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-    .submit-btn:hover:not(:disabled) { opacity: 0.85; }
-    .result { margin-top: 16px; padding: 14px 16px; border-radius: 8px; font-size: 0.9rem; white-space: pre-wrap; }
-    .result.success { background: #dcfce7; color: #15803d; border: 1px solid #86efac; }
-    .result.error { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
-    .nav-links { text-align: center; margin-top: 20px; font-size: 0.85rem; }
-    .nav-links a { color: var(--accent); }
-    .photo-preview { max-width: 100%; max-height: 200px; border-radius: 8px; margin-bottom: 16px; display: none; object-fit: cover; }
+    /* ---------- landing-specific ---------- */
+    header.site {
+      position: sticky; top: 0; z-index: 50;
+      background: color-mix(in srgb, var(--bg) 82%, transparent);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--line);
+    }
+    .nav { display: flex; align-items: center; justify-content: space-between; height: 64px; }
+    .logo { display: flex; align-items: center; gap: 10px; font-weight: 700; letter-spacing: -0.02em; font-size: 1.05rem; color: var(--ink); }
+    .logo svg { width: 26px; height: 26px; }
+    nav.actions { display: flex; gap: 10px; align-items: center; }
+
+    .hero { padding: 88px 0 72px; position: relative; overflow: hidden; }
+    .hero .kicker {
+      display: inline-flex; align-items: center; gap: 8px;
+      font: 500 0.78rem var(--font-mono); letter-spacing: 0.06em;
+      color: var(--brand); text-transform: uppercase;
+      border: 1px solid color-mix(in srgb, var(--brand) 30%, transparent);
+      padding: 6px 14px; border-radius: 999px; margin-bottom: 28px;
+    }
+    .hero h1 {
+      font-size: clamp(2.4rem, 6vw, 4.2rem);
+      line-height: 1.05; max-width: 15ch;
+    }
+    .hero h1 em { font-style: italic; color: var(--brand); }
+    .hero .sub { margin-top: 22px; font-size: 1.1rem; color: var(--ink-2); max-width: 54ch; }
+    .hero .cta-row { display: flex; gap: 12px; margin-top: 36px; flex-wrap: wrap; }
+
+    .hero-stats {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px;
+      background: var(--line); border: 1px solid var(--line);
+      border-radius: var(--radius-lg); overflow: hidden;
+      margin-top: 64px; box-shadow: var(--shadow-md);
+    }
+    .hero-stats div { background: var(--bg-raised); padding: 20px 24px; }
+    .hero-stats b { display: block; font-size: 1.5rem; font-weight: 600; letter-spacing: -0.02em; }
+    .hero-stats span { font-size: 0.8rem; color: var(--ink-3); }
+
+    /* flow diagram */
+    .flow { padding: 24px 0 88px; }
+    .flow-track {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px;
+      counter-reset: step;
+    }
+    .flow-step { position: relative; padding: 22px; border-radius: var(--radius-lg); }
+    .flow-step .num {
+      font: 500 0.72rem var(--font-mono); color: var(--brand);
+      border: 1px solid color-mix(in srgb, var(--brand) 35%, transparent);
+      width: 26px; height: 26px; display: grid; place-items: center;
+      border-radius: 999px; margin-bottom: 14px;
+    }
+    .flow-step h3 { font-size: 0.95rem; margin-bottom: 6px; }
+    .flow-step p { font-size: 0.82rem; color: var(--ink-2); }
+    .flow-step::after {
+      content: "→"; position: absolute; right: -13px; top: 50%; transform: translateY(-50%);
+      color: var(--ink-3); font-size: 0.9rem; z-index: 2;
+    }
+    .flow-step:last-child::after { display: none; }
+
+    section.research { padding: 72px 0; border-top: 1px solid var(--line); }
+    .research-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center; }
+    .indicator-list { display: grid; gap: 10px; margin-top: 20px; }
+    .indicator-list li {
+      list-style: none; display: flex; gap: 12px; align-items: baseline;
+      padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--radius);
+      background: var(--bg-raised);
+    }
+    .indicator-list li::before { content: "◈"; color: var(--brand); }
+    .indicator-list b { font-weight: 600; }
+    .indicator-list span { display: block; font-size: 0.82rem; color: var(--ink-2); }
+
+    footer.site { border-top: 1px solid var(--line); padding: 28px 0 40px; color: var(--ink-3); font-size: 0.82rem; }
+    .foot-row { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+
+    @media (max-width: 900px) {
+      .flow-track { grid-template-columns: 1fr 1fr; }
+      .flow-step::after { display: none; }
+      .research-grid { grid-template-columns: 1fr; gap: 28px; }
+    }
+    @media (max-width: 560px) {
+      .hero { padding: 60px 0 48px; }
+      .flow-track { grid-template-columns: 1fr; }
+      .hero-stats { grid-template-columns: 1fr; }
+    }
   </style>
 </head>
 <body>
-  <header>
-    <h1>StreamCheck — Submit Observation</h1>
-    <p>Simulating an observation arriving from the OneAquaHealth Citizen Science App</p>
+  <header class="site">
+    <div class="container nav">
+      <a class="logo" href="/" aria-label="Riparia home">
+        <svg viewBox="0 0 32 32" fill="none" aria-hidden="true">
+          <rect width="32" height="32" rx="8" fill="var(--brand)"/>
+          <path d="M7 19c2.5 0 2.5-2 5-2s2.5 2 5 2 2.5-2 5-2 2.5 2 3 2" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+          <path d="M7 24c2.5 0 2.5-2 5-2s2.5 2 5 2 2.5-2 5-2 2.5 2 3 2" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity=".55"/>
+          <circle cx="22" cy="9.5" r="3.5" stroke="#fff" stroke-width="2"/>
+        </svg>
+        Riparia
+      </a>
+      <nav class="actions" aria-label="Primary">
+        <button class="theme-toggle" data-theme-toggle aria-pressed="false" aria-label="Toggle dark mode">◐ <span>Theme</span></button>
+        <a class="btn btn-ghost" href="/dashboard.html">Reviewer sign in</a>
+        <a class=" btn btn-primary" href="/submit.html">Report a stream</a>
+      </nav>
+    </div>
   </header>
+
   <main>
-    <div class="form-card">
-      <form id="obs-form">
-        <label for="photo">Photo of the stream/riparian area</label>
-        <span class="hint">JPEG, PNG, or WebP — max 10 MB</span>
-        <input type="file" id="photo" accept="image/*" required>
-        <img id="preview" class="photo-preview" alt="Photo preview">
-        <label for="description">Description</label>
-        <span class="hint">Describe what you see: water color, vegetation, trash, smells, nearby lights, anything notable</span>
-        <textarea id="description" required minlength="3" maxlength="2000" placeholder="e.g. I saw foam on the water surface near the bridge, there's a streetlight right over the stream, and some plastic bottles on the bank"></textarea>
-        <button type="submit" class="submit-btn" id="submit-btn">Submit observation</button>
-      </form>
-      <div id="result"></div>
-    </div>
-    <div class="nav-links">
-      <a href="/dashboard.html">Reviewer dashboard →</a>
-    </div>
+    <section class="hero">
+      <div class="container">
+        <span class="kicker">Urban freshwater · AI-assisted assessment · HL7 FHIR</span>
+        <h1 class="display">Citizen photos in. <em>Public-health intelligence</em> out.</h1>
+        <p class="sub">
+          Riparia is the validation layer between citizen science apps and the health
+          systems that need their data. Every observation is assessed against published
+          urban-stream indicators by AI — and confirmed by a human reviewer — before it
+          becomes standards-grade HL7 FHIR data.
+        </p>
+        <div class="cta-row">
+          <a class="btn btn-primary" href="/submit.html">Report a stream</a>
+          <a class="btn btn-ghost" href="#how">How it works</a>
+        </div>
+
+        <div class="hero-stats" role="list" aria-label="Platform facts">
+          <div role="listitem"><b>4</b><span>published ecological indicators, assessed on every submission</span></div>
+          <div role="listitem"><b>100%</b><span>human-reviewed before anything is committed</span></div>
+          <div role="listitem"><b>HL7 FHIR</b><span>Observation resources, readable by municipal systems</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="flow container" id="how" aria-label="How Riparia works">
+      <div class="flow-track">
+        <div class="card flow-step">
+          <div class="num">01</div>
+          <h3>Citizens observe</h3>
+          <p>A photo and a few words, submitted from the field through the citizen form or a partner app.</p>
+        </div>
+        <div class="card flow-step">
+          <div class="num">02</div>
+          <h3>AI assesses</h3>
+          <p>A vision model checks the submission against OneAquaHealth's published indicators and returns a confidence score with a plain-language rationale.</p>
+        </div>
+        <div class="card flow-step">
+          <div class="num">03</div>
+          <h3>Humans decide</h3>
+          <p>Reviewers see the evidence and the AI's reasoning, then approve or reject. Nothing moves without a person.</p>
+        </div>
+        <div class="card flow-step">
+          <div class="num">04</div>
+          <h3>Systems consume</h3>
+          <p>Approved observations are committed as HL7 FHIR — interoperable with municipal and public-health platforms.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="research">
+      <div class="container research-grid">
+        <div>
+          <h2 class="display" style="font-size:clamp(1.8rem,4vw,2.6rem)">Grounded in published research, not guesswork</h2>
+          <p style="margin-top:16px;color:var(--ink-2)">
+            The OneAquaHealth project found pharmaceutical contamination at the majority of
+            monitored urban stream sites, and degraded streams hosting disease-vector
+            insects. Riparia's assessment criteria are those findings' early-warning
+            indicators — not generic pollution language.
+          </p>
+        </div>
+        <ul class="indicator-list" aria-label="Assessed indicators">
+          <li><div><b>Riparian vegetation degradation</b><span>Loss of streamside plant cover — habitat and erosion signal</span></div></li>
+          <li><div><b>Artificial light at night</b><span>Near-water lighting that disrupts aquatic ecosystems</span></div></li>
+          <li><div><b>Trash &amp; debris</b><span>Visible pollution and physical contamination</span></div></li>
+          <li><div><b>Chemical / pharmaceutical signs</b><span>Foam, sheen, unusual color, odor cues</span></div></li>
+        </ul>
+      </div>
+    </section>
   </main>
-  <script>
-    const form = document.getElementById('obs-form');
-    const fileInput = document.getElementById('photo');
-    const preview = document.getElementById('preview');
-    const resultEl = document.getElementById('result');
-    const btn = document.getElementById('submit-btn');
 
-    fileInput.addEventListener('change', () => {
-      const file = fileInput.files[0];
-      if (file) {
-        preview.src = URL.createObjectURL(file);
-        preview.style.display = 'block';
-      } else {
-        preview.style.display = 'none';
-      }
-    });
-
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      resultEl.innerHTML = '';
-      btn.disabled = true;
-      btn.textContent = 'Submitting...';
-
-      const fd = new FormData();
-      fd.append('photo', fileInput.files[0]);
-      fd.append('text_description', document.getElementById('description').value);
-
-      try {
-        const res = await fetch('/observations', { method: 'POST', body: fd });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.detail || 'Submission failed');
-        const indicators = (data.ai_indicators || []).map(i => i.replace(/_/g, ' ')).join(', ');
-        resultEl.innerHTML = `<div class="result success">✅ Observation #${data.id} saved as pending.
-Confidence: ${Math.round(data.ai_confidence * 100)}%
-Indicators: ${indicators || 'none detected'}
-
-Go to the reviewer dashboard to approve or reject.</div>`;
-        form.reset();
-        preview.style.display = 'none';
-      } catch (err) {
-        resultEl.innerHTML = `<div class="result error">❌ ${err.message}</div>`;
-      } finally {
-        btn.disabled = false;
-        btn.textContent = 'Submit observation';
-      }
-    });
-  </script>
+  <footer class="site">
+    <div class="container foot-row">
+      <span>© 2026 Riparia · Validation middleware for urban freshwater health</span>
+      <span><a href="/submit.html">Citizen form</a> · <a href="/dashboard.html">Reviewer dashboard</a> · <a href="/docs">API</a></span>
+    </div>
+  </footer>
+  <script src="/js/app.js"></script>
 </body>
 </html>

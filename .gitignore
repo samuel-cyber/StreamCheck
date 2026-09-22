@@ -1,8 +1,40 @@
-data/
+# --- Python ---
 __pycache__/
-*.pyc
-.env
-*.db
-*.sqlite
+*.py[cod]
+*.egg-info/
 .venv/
 venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+htmlcov/
+.coverage
+.freebuff
+# --- Environment / secrets (never commit; .env.example IS committed) ---
+.env
+.env.local
+.env.production
+*.pem
+*.key
+
+# --- Local dev data (ephemeral) ---
+data/
+*.db
+*.sqlite
+*.sqlite3
+
+# --- IDE ---
+.vscode/
+.idea/
+*.swp
+
+# --- OS junk ---
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- Build artifacts ---
+dist/
+build/
+*.egg-info
+node_modules/

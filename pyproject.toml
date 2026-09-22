@@ -1,0 +1,18 @@
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "RUF", "BLE"]
+ignore = [
+    "B008",  # FastAPI: Form(...)/File(...)/Depends(...) in defaults is the framework idiom
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Settings class: mutable defaults are intentional (single instantiated object).
+"app/config.py" = ["RUF012"]
+# Error-surfacing handlers intentionally catch broadly to return clean 502s.
+"app/main.py" = ["BLE001"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
