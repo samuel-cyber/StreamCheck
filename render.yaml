@@ -2,6 +2,17 @@
 # Deploy: Render Dashboard → New → Blueprint → point at this repo.
 services:
   - type: web
+    name: riparia-fhir
+    runtime: image
+    image:
+      url: docker.io/hapiproject/hapi:latest
+    plan: free
+    envVars:
+      - key: PORT
+        value: "8080"
+      - key: hapi.fhir.default_encoding
+        value: json
+  - type: web
     name: riparia-api
     runtime: python
     plan: free
