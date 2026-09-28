@@ -44,6 +44,8 @@ class Settings:
     GEMINI_API_KEY: str = _env("GEMINI_API_KEY")
     # 'gemini-flash-latest' alias always resolves to a live flash-tier model.
     GEMINI_MODEL: str = _env("GEMINI_MODEL", "gemini-flash-latest")
+    # Used automatically when the primary model stays overloaded (503/429).
+    GEMINI_FALLBACK_MODEL: str = _env("GEMINI_FALLBACK_MODEL", "gemini-flash-lite-latest")
 
     # --- FHIR ---
     FHIR_BASE_URL: str = _env("FHIR_BASE_URL", "https://hapi.fhir.org/baseR4").rstrip("/")

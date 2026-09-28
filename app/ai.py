@@ -75,39 +75,56 @@ def _mock_assessment(text_description: str) -> dict:
 
 
 _TRANSIENT_MARKERS = ("503", "UNAVAILABLE", "429", "RESOURCE_EXHAUSTED", "Deadline", "timed out")
-_MAX_ATTEMPTS = 3
+_ATTEMPTS_PER_MODEL = 3
+_BACKOFF_BASE_SECONDS = 2.0  # 2s, 4s between attempts on the same model
+
+
+def _call_model(client, model: str, data: bytes, mime: str, text_description: str) -> dict:
+    response = client.models.generate_content(
+        model=model,
+        contents=[
+            genai_types.Part.from_bytes(data=data, mime_type=mime),
+            f"Text description from citizen: {text_description!r}",
+        ],
+        config=genai_types.GenerateContentConfig(
+            system_instruction=SYSTEM_PROMPT,
+            response_mime_type="application/json",
+            temperature=0.2,
+        ),
+    )
+    return json.loads(response.text)
+
+
+def _is_transient(exc: Exception) -> bool:
+    return any(marker in str(exc) for marker in _TRANSIENT_MARKERS)
 
 
 def _gemini_assessment(data: bytes, mime: str, text_description: str) -> dict:
-    """Single well-prompted call, with bounded retry on transient provider errors
-    (free-tier 503 'high demand' / 429 rate limits) so a demo never dies to a blip."""
+    """One well-prompted call. Rides out provider overload (503 / 429) by retrying with
+    backoff, then failing over to a second model, so a demand spike never kills a submission."""
     client = genai.Client(api_key=settings.GEMINI_API_KEY)
-    last_exc: Exception | None = None
-    for attempt in range(_MAX_ATTEMPTS):
-        try:
-            response = client.models.generate_content(
-                model=settings.GEMINI_MODEL,
-                contents=[
-                    genai_types.Part.from_bytes(data=data, mime_type=mime),
-                    f"Text description from citizen: {text_description!r}",
-                ],
-                config=genai_types.GenerateContentConfig(
-                    system_instruction=SYSTEM_PROMPT,
-                    response_mime_type="application/json",
-                    temperature=0.2,
-                ),
-            )
-            return json.loads(response.text)
-        except json.JSONDecodeError:
-            raise  # model answered with garbage — retrying will not help
-        except Exception as exc:
-            last_exc = exc
-            msg = str(exc)
-            if not any(marker in msg for marker in _TRANSIENT_MARKERS):
-                raise
-            if attempt < _MAX_ATTEMPTS - 1:
-                time.sleep(1.5 * (2**attempt))  # 1.5s, 3s
-    raise last_exc  # pragma: no cover — loop always returns or raises
+    models = [settings.GEMINI_MODEL]
+    fallback = getattr(settings, "GEMINI_FALLBACK_MODEL", "")
+    if fallback and fallback != settings.GEMINI_MODEL:
+        models.append(fallback)
+
+    first_error: Exception | None = None
+    for model in models:
+        for attempt in range(_ATTEMPTS_PER_MODEL):
+            try:
+                return _call_model(client, model, data, mime, text_description)
+            except json.JSONDecodeError:
+                raise  # model answered with garbage; retrying will not help
+            except Exception as exc:
+                if first_error is None:
+                    first_error = exc
+                if not _is_transient(exc):
+                    if model == settings.GEMINI_MODEL:
+                        raise  # real error on the primary model (bad key, bad request)
+                    raise first_error from exc  # bad fallback: report original 503
+                if attempt < _ATTEMPTS_PER_MODEL - 1:
+                    time.sleep(_BACKOFF_BASE_SECONDS * (2**attempt))
+    raise first_error  # every model stayed overloaded
 
 
 def assess(data: bytes, mime: str, text_description: str) -> dict:
